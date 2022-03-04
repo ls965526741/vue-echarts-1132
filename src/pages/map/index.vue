@@ -6,10 +6,12 @@
 import { getData } from '@/api'
 import { debounce } from 'lodash'
 import getProvinceMapInfo from '@/utils/map_utils.js'
+import { titleSzie } from '@/config'
 export default {
   data() {
     return {
-      mChart: null
+      mChart: null,
+      dbcDebounce: null
     }
   },
   methods: {
@@ -20,14 +22,14 @@ export default {
     },
     // 初始化图标
     async init() {
-      this.mChart = this.$echarts.init(this.$refs.mapRef, 'thalk')
+      this.mChart = this.$echarts.init(this.$refs.mapRef, 'chalk')
       const chinaMap = await getData('map/china')
       this.$echarts.registerMap('china', chinaMap)
       const option = {
         title: {
           text: '▎商家分布',
-          left: 20,
-          top: 20
+          left: '3%',
+          top: '3%'
         },
         geo: {
           type: 'map',
@@ -58,7 +60,6 @@ export default {
         }
         const res = await getData(params.path)
         this.$echarts.registerMap(params.key, res)
-        console.log(res)
         const option = {
           geo: {
             map: params.key
@@ -110,7 +111,7 @@ export default {
       const option = {
         title: {
           textStyle: {
-            fontSize: scaleW * 50
+            fontSize: scaleW * titleSzie
           }
         },
         legend: {

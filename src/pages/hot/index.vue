@@ -10,6 +10,7 @@
 <script>
 import { debounce } from 'lodash'
 import { getData } from '@/api'
+import { titleSzie } from '@/config'
 export default {
   data() {
     return {
@@ -39,17 +40,17 @@ export default {
   },
   methods: {
     async init() {
-      this.mChart = this.$echarts.init(this.$refs.hotRef, 'thalk')
+      this.mChart = this.$echarts.init(this.$refs.hotRef, 'chalk')
       this.list = await getData('hotproduct')
       const option = {
         title: {
           text: '▎热销商品占比',
-          left: 20,
-          top: 20
+          left: '3%',
+          top: '3%'
         },
         legend: {
           icon: 'circle',
-          top: 70,
+          top: '15%',
           left: 30
         },
         tooltip: {
@@ -65,7 +66,7 @@ export default {
         series: [
           {
             type: 'pie',
-            center: ['50%', '50%'],
+            center: ['50%', '60%'],
             label: {
               show: false
             },
@@ -82,7 +83,6 @@ export default {
       this.mChart.setOption(option)
       this.update()
     },
-    getLsit() {},
     // 数据更新
     update() {
       const option = {
@@ -97,14 +97,13 @@ export default {
     // 屏幕适配
     screenFit() {
       const w = this.$refs.hotRef.offsetWidth
-      const h = this.$refs.hotRef.offsetHeight
 
       const scaleW = w / 1440
       this.scaleW = scaleW
       const option = {
         title: {
           textStyle: {
-            fontSize: scaleW * 60
+            fontSize: scaleW * titleSzie
           }
         },
         legend: {
@@ -119,12 +118,12 @@ export default {
         series: [
           {
             type: 'pie',
-            radius: scaleW * 300,
-            center: [w / 2, h / 2]
+            radius: scaleW * 300
           }
         ]
       }
       this.mChart.setOption(option)
+      this.mChart.resize()
     },
     typeSwitch() {
       this.currentIndex =
@@ -141,20 +140,23 @@ export default {
 }
 .icon-left {
   position: absolute;
-  top: 50%;
+  top: 60%;
   left: 20%;
+  color: #fff;
   transform: translateX(-50%);
   cursor: pointer;
 }
 .icon-right {
   position: absolute;
-  top: 50%;
+  top: 60%;
   left: 80%;
+  color: #fff;
   transform: translateX(50%);
 }
 .cate-name {
   position: absolute;
   bottom: 30px;
   right: 30px;
+  color: #fff;
 }
 </style>

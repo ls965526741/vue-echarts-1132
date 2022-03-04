@@ -5,6 +5,7 @@
 <script>
 import { getData } from '@/api'
 import { debounce } from 'lodash'
+import { titleSzie } from '@/config'
 export default {
   data() {
     return {
@@ -44,7 +45,7 @@ export default {
   methods: {
     async init() {
       const arr = []
-      this.mChart = this.$echarts.init(this.$refs.stockRef, 'thalk')
+      this.mChart = this.$echarts.init(this.$refs.stockRef, 'chalk')
       const res = await getData('stock')
       res.sort((a, b) => b.sales - a.sales)
       for (let i = 0; i < res.length / 5; i++) {
@@ -56,7 +57,7 @@ export default {
           const option = {
             type: 'pie',
             // 关闭鼠标移入到饼图的动画效果
-            // center: this.centerArr[index2],
+            center: this.centerArr[index2],
             hoverAnimation: false,
             labelLine: {
               show: false
@@ -111,8 +112,8 @@ export default {
       const option = {
         title: {
           text: '▎库存和销量分析',
-          left: 20,
-          top: 20
+          left: '3%',
+          top: '3%'
         }
       }
       this.mChart.setOption(option)
@@ -134,36 +135,23 @@ export default {
     },
     screenFit() {
       const scaleW = this.$refs.stockRef.offsetWidth / 1440
-      const scaleH = this.$refs.stockRef.offsetHeight / 800
-      console.log(scaleW)
-
-      const seriesOption = index => {
-        const option = {
-          type: 'pie',
-          radius: [120 * scaleW, 100 * scaleW],
-          center: [
-            parseInt(this.centerArr[index][0]) * scaleW + '%',
-            parseInt(this.centerArr[index][1]) * scaleH + '%'
-          ],
-          label: {
-            fontSize: 40 * scaleW
-          }
+      const seriesOption = {
+        type: 'pie',
+        radius: [150 * scaleW, 130 * scaleW],
+        label: {
+          fontSize: 40 * scaleW
         }
-        return option
-      }
-      const seriesArr = []
-      for (let i = 0; i < 5; i++) {
-        seriesArr.push(seriesOption(i))
       }
       const option = {
         title: {
           textStyle: {
-            fontSize: scaleW * 60
+            fontSize: scaleW * titleSzie
           }
         },
-        series: seriesArr
+        series: new Array(5).fill(seriesOption)
       }
       this.mChart.setOption(option)
+      this.mChart.resize()
     },
     startInterval() {
       this.timer = setInterval(() => {

@@ -3,35 +3,44 @@
 </template>
 
 <script>
-import { getRank } from '@/api'
+import { getData } from '@/api'
 import * as echarts from 'echarts'
+import { titleSzie } from '@/config'
 export default {
   data() {
-    return {}
+    return {
+      mChart: null,
+      list: [],
+      currentIndex: 0,
+      timer: null
+    }
+  },
+  mounted() {
+    this.getList()
+    this.init()
+    addEventListener('resize', this.screenFit)
+    this.screenFit()
+    this.startInterval()
+  },
+  destroyed() {
+    removeEventListener('resize', this.screenFit)
+    clearInterval(this.timer)
   },
   methods: {
     // 初始化echarts
-    initChart() {
+    init() {
       this.mChart = echarts.init(this.$refs.rank, 'chalk')
       const initPoint = {}
       this.mChart.setOption(initPoint)
     },
     async getList() {
-      this.list = []
-      const res = await getRank()
-      res.sort((a, b) => a.value - b.value)
-      this.total = res.length % this.size === 0 ? res.length / this.size : Math.floor(res.length / this.size) + 1
-      for (let index = 0; index < res.length / this.size; index++) {
-        this.list.push(res.slice(index * this.size, (index + 1) * this.size))
-      }
-
-      console.log(res)
-
+      const res = await getData('rank')
+      this.list = res.sort((a, b) => b.value - a.value)
       const option = {
         title: {
           text: '▎地区销售排行',
-          left: 20,
-          top: 20
+          left: '3%',
+          top: '3%'
         },
         grid: {
           top: '20%',
@@ -44,39 +53,22 @@ export default {
         tooltip: {
           show: true
         },
-        xAxis: { value: 'value' },
-        yAxis: {
+        xAxis: {
           type: 'category'
+        },
+        yAxis: {
+          value: 'value'
         },
         series: [
           {
             type: 'bar',
-            barWidth: 50,
             label: {
               show: true,
-              position: 'right',
+              position: 'top',
               color: 'white'
             },
             itemStyle: {
-              borderRadius: [0, 25, 25, 0],
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 1,
-                y2: 0,
-                colorStops: [
-                  {
-                    offset: 0,
-                    color: 'blue' // 0% 处的颜色
-                  },
-                  {
-                    offset: 1,
-                    color: 'skyblue' // 100% 处的颜色
-                  }
-                ],
-                global: false // 缺省为 false
-              }
+              borderRadius: [25, 25, 0, 0]
             }
           }
         ]
@@ -90,36 +82,92 @@ export default {
       this.mChart.on('mouseout', () => {
         this.startInterval()
       })
-      this.updateChart()
-      this.startInterval()
+      this.updateC()
     },
-    updateChart() {
-      const provinceInfo = this.list[this.currentPage].map(item => item.name)
+    updateC() {
+      // 渐变色数组
+      const colorArr = [
+        ['#0BA82C', '#4FF778'],
+        ['#2E72BF', '#23E5E5'],
+        ['#5052EE', '#AB6EE5']
+      ]
+      const provinceInfo = this.list.map(item => item.name)
+
       const option = {
-        yAxis: {
+        xAxis: {
           data: provinceInfo
+        },
+        dataZoom: {
+          // 区域缩放组件
+          show: false,
+          startValue: this.currentIndex,
+          endValue: this.currentIndex + 10
         },
         series: [
           {
-            data: this.list[this.currentPage]
+            data: this.list,
+            itemStyle: {
+              color: ({ data }) => {
+                let targetColorArr = null
+                if (data.value > 300) {
+                  targetColorArr = colorArr[0]
+                } else if (data.value > 200) {
+                  targetColorArr = colorArr[1]
+                } else {
+                  targetColorArr = colorArr[2]
+                }
+                return {
+                  type: 'linear',
+                  x: 0,
+                  y: 0,
+                  x2: 0,
+                  y2: 1,
+                  colorStops: [
+                    {
+                      offset: 0,
+                      color: targetColorArr[0] // 0% 处的颜色
+                    },
+                    {
+                      offset: 1,
+                      color: targetColorArr[1] // 100% 处的颜色
+                    }
+                  ],
+                  global: false // 缺省为 false
+                }
+              }
+            }
           }
         ]
       }
       this.mChart.setOption(option)
     },
+    screenFit() {
+      const scaleW = this.$refs.rank.offsetWidth / 1440
+      const option = {
+        title: {
+          textStyle: {
+            fontSize: scaleW * titleSzie
+          }
+        },
+        series: [
+          {
+            barWidth: scaleW * 50
+          }
+        ]
+      }
+      this.mChart.setOption(option)
+      this.mChart.resize()
+    },
     startInterval() {
+      this.timerId && clearInterval(this.timerId)
       this.timer = setInterval(() => {
-        this.currentPage++
-        if (this.currentPage > this.total - 1) {
-          this.currentPage = 0
+        this.currentIndex++
+        if (this.currentIndex > this.list.length - 11) {
+          this.currentIndex = 0
         }
-        this.updateChart()
+        this.updateC()
       }, 3000)
     }
-  },
-  mounted() {
-    this.getList()
-    this.initChart()
   }
 }
 </script>
@@ -128,8 +176,5 @@ export default {
 .rank {
   width: 100%;
   height: 100%;
-}
-canvas {
-  border-radius: 20px;
 }
 </style>

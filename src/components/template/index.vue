@@ -25,7 +25,7 @@ export default {
   methods: {
     // 初始化echarts
     async init() {
-      this.mChart = this.$echarts.init(this.refs.stockRef, 'thalk')
+      this.mChart = this.$echarts.init(this.$refs.stockRef, 'thalk')
       const res = await getData()
       console.log(res)
       const option = {}
@@ -35,6 +35,7 @@ export default {
     update() {
       const option = {}
       this.mChart.setOption(option)
+      this.mChart.resize()
     },
     // 屏幕适配
     screenFit() {

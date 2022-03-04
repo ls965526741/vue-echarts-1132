@@ -5,6 +5,7 @@
 <script>
 import { getData } from '@/api'
 import { debounce } from 'lodash'
+import { titleSzie } from '@/config'
 export default {
   data() {
     return {
@@ -28,7 +29,7 @@ export default {
   },
   methods: {
     async init() {
-      this.mChart = this.$echarts.init(this.$refs.sellerRef, 'thalk')
+      this.mChart = this.$echarts.init(this.$refs.sellerRef, 'chalk')
       const res = await getData('seller')
       res.sort((a, b) => a.value - b.value)
       this.total = res.length % this.size === 0 ? res.length / this.size : Math.floor(res.length / this.size) + 1
@@ -42,8 +43,8 @@ export default {
       const option = {
         title: {
           text: '▎商家销售统计',
-          left: 20,
-          top: 20
+          left: '3%',
+          top: '3%'
         },
         grid: {
           top: '20%',
@@ -63,7 +64,6 @@ export default {
         series: [
           {
             type: 'bar',
-            barWidth: 50,
             label: {
               show: true,
               position: 'right',
@@ -120,8 +120,21 @@ export default {
       this.mChart.setOption(option)
     },
     screenFit() {
-      const option = {}
+      const scaleW = this.$refs.sellerRef.offsetWidth / 1440
+      const option = {
+        title: {
+          textStyle: {
+            fontSize: scaleW * titleSzie
+          }
+        },
+        series: [
+          {
+            barWidth: scaleW * 80
+          }
+        ]
+      }
       this.mChart.setOption(option)
+      this.mChart.resize()
     },
     startInterval() {
       this.timer = setInterval(() => {
