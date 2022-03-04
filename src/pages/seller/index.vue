@@ -1,35 +1,47 @@
 <template>
-  <div ref="rank" class="rank"></div>
+  <div class="e-container" ref="sellerRef"></div>
 </template>
 
 <script>
-import { getRank } from '@/api'
-import * as echarts from 'echarts'
+import { getData } from '@/api'
+import { debounce } from 'lodash'
 export default {
   data() {
-    return {}
+    return {
+      list: [],
+      dbcScreenFit: null,
+      currentPage: 0,
+      mChart: null,
+      timer: null,
+      total: 0,
+      size: 6
+    }
+  },
+  mounted() {
+    this.dbcScreenFit = debounce(this.screenFit, 20)
+    this.init()
+    addEventListener('resize', this.dbcScreenFit)
+    this.screenFit()
+  },
+  destroyed() {
+    removeEventListener('resize', this.dbcScreenFit)
   },
   methods: {
-    // 初始化echarts
-    initChart() {
-      this.mChart = echarts.init(this.$refs.rank, 'chalk')
-      const initPoint = {}
-      this.mChart.setOption(initPoint)
-    },
-    async getList() {
-      this.list = []
-      const res = await getRank()
+    async init() {
+      this.mChart = this.$echarts.init(this.$refs.sellerRef, 'thalk')
+      const res = await getData('seller')
       res.sort((a, b) => a.value - b.value)
       this.total = res.length % this.size === 0 ? res.length / this.size : Math.floor(res.length / this.size) + 1
       for (let index = 0; index < res.length / this.size; index++) {
-        this.list.push(res.slice(index * this.size, (index + 1) * this.size))
+        if ((index + 1) * this.size > res.length) {
+          this.list.push(res.slice(res.length - this.size, res.length))
+        } else {
+          this.list.push(res.slice(index * this.size, (index + 1) * this.size))
+        }
       }
-
-      console.log(res)
-
       const option = {
         title: {
-          text: '▎地区销售排行',
+          text: '▎商家销售统计',
           left: 20,
           top: 20
         },
@@ -90,10 +102,10 @@ export default {
       this.mChart.on('mouseout', () => {
         this.startInterval()
       })
-      this.updateChart()
+      this.update()
       this.startInterval()
     },
-    updateChart() {
+    update() {
       const provinceInfo = this.list[this.currentPage].map(item => item.name)
       const option = {
         yAxis: {
@@ -107,29 +119,22 @@ export default {
       }
       this.mChart.setOption(option)
     },
+    screenFit() {
+      const option = {}
+      this.mChart.setOption(option)
+    },
     startInterval() {
       this.timer = setInterval(() => {
         this.currentPage++
         if (this.currentPage > this.total - 1) {
           this.currentPage = 0
         }
-        this.updateChart()
+        this.update()
       }, 3000)
     }
-  },
-  mounted() {
-    this.getList()
-    this.initChart()
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.rank {
-  width: 100%;
-  height: 100%;
-}
-canvas {
-  border-radius: 20px;
-}
 </style>

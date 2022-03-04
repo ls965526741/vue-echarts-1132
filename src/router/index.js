@@ -17,6 +17,18 @@ const routes = [
     component: () => import('@/pages/map')
   },
   {
+    path: '/seller',
+    component: () => import('@/pages/seller')
+  },
+  {
+    path: '/stock',
+    component: () => import('@/pages/stock')
+  },
+  {
+    path: '/trend',
+    component: () => import('@/pages/trend')
+  },
+  {
     path: '/hot',
     component: () => import('@/pages/hot')
   },
