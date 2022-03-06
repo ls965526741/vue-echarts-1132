@@ -7,39 +7,57 @@ import { getData } from '@/api'
 import { debounce } from 'lodash'
 import { titleSzie } from '@/config'
 export default {
+  props: {
+    theme: {
+      type: String,
+      default: 'chalk'
+    }
+  },
   data() {
     return {
-      list: [],
       dbcScreenFit: null,
+      list: [],
       currentPage: 0,
       mChart: null,
+      startValueArr: [],
       timer: null,
-      total: 0,
       size: 6
     }
   },
   mounted() {
     this.dbcScreenFit = debounce(this.screenFit, 20)
-    this.init()
-    addEventListener('resize', this.dbcScreenFit)
-    this.screenFit()
+    this.getList()
   },
   destroyed() {
     removeEventListener('resize', this.dbcScreenFit)
   },
+  watch: {
+    theme() {
+      this.mChart.dispose()
+      this.init()
+      this.screenFit()
+      this.updateC()
+    }
+  },
   methods: {
-    async init() {
-      this.mChart = this.$echarts.init(this.$refs.sellerRef, 'chalk')
+    async getList() {
       const res = await getData('seller')
-      res.sort((a, b) => a.value - b.value)
-      this.total = res.length % this.size === 0 ? res.length / this.size : Math.floor(res.length / this.size) + 1
-      for (let index = 0; index < res.length / this.size; index++) {
-        if ((index + 1) * this.size > res.length) {
-          this.list.push(res.slice(res.length - this.size, res.length))
+      this.list = res.sort((a, b) => a.value - b.value)
+      for (let i = 0; i < res.length / this.size; i++) {
+        if ((i + 1) * this.size >= res.length) {
+          this.startValueArr.push(res.length - this.size - 1)
         } else {
-          this.list.push(res.slice(index * this.size, (index + 1) * this.size))
+          this.startValueArr.push(i * this.size)
         }
       }
+      this.init()
+      addEventListener('resize', this.dbcScreenFit)
+      this.screenFit()
+    },
+    init() {
+      this.mChart = this.$echarts.init(this.$refs.sellerRef, this.theme)
+      const provinceInfo = this.list.map(item => item.name)
+
       const option = {
         title: {
           text: '▎商家销售统计',
@@ -55,22 +73,37 @@ export default {
           containLabel: true
         },
         tooltip: {
-          show: true
+          // 当鼠标移入axis(坐标轴)时展示 底层的背景色
+          trigger: 'axis',
+          axisPointer: {
+            // 展示的类型是线条类型
+            type: 'line',
+            lineStyle: {
+              color: '#2d3443'
+            },
+            // 相等于 z-index 将层级调低
+            z: 0
+          }
         },
-        xAxis: { value: 'value' },
+        xAxis: {
+          type: 'value'
+        },
         yAxis: {
-          type: 'category'
+          type: 'category',
+          data: provinceInfo
         },
         series: [
           {
             type: 'bar',
+            data: this.list,
             label: {
               show: true,
               position: 'right',
-              color: 'white'
+              textStyle: {
+                color: 'white'
+              }
             },
             itemStyle: {
-              borderRadius: [0, 25, 25, 0],
               color: {
                 type: 'linear',
                 x: 0,
@@ -80,11 +113,11 @@ export default {
                 colorStops: [
                   {
                     offset: 0,
-                    color: 'blue' // 0% 处的颜色
+                    color: '#5052EE' // 0% 处的颜色
                   },
                   {
                     offset: 1,
-                    color: 'skyblue' // 100% 处的颜色
+                    color: '#AB6EE5' // 100% 处的颜色
                   }
                 ],
                 global: false // 缺省为 false
@@ -102,34 +135,42 @@ export default {
       this.mChart.on('mouseout', () => {
         this.startInterval()
       })
-      this.update()
+      this.updateC()
       this.startInterval()
     },
-    update() {
-      const provinceInfo = this.list[this.currentPage].map(item => item.name)
+    updateC() {
       const option = {
-        yAxis: {
-          data: provinceInfo
-        },
-        series: [
-          {
-            data: this.list[this.currentPage]
-          }
-        ]
+        dataZoom: {
+          // 区域缩放组件
+          show: false,
+          yAxisIndex: 0,
+          startValue: this.startValueArr[this.currentPage],
+          endValue: this.startValueArr[this.currentPage] + this.size
+        }
       }
       this.mChart.setOption(option)
     },
     screenFit() {
-      const scaleW = this.$refs.sellerRef.offsetWidth / 1440
+      const scaleW = this.$refs.sellerRef.offsetWidth / 1440 || 1
       const option = {
         title: {
           textStyle: {
             fontSize: scaleW * titleSzie
           }
         },
+        tooltip: {
+          axisPointer: {
+            lineStyle: {
+              width: scaleW * titleSzie
+            }
+          }
+        },
         series: [
           {
-            barWidth: scaleW * 80
+            barWidth: scaleW * titleSzie,
+            itemStyle: {
+              barBorderRadius: [0, (scaleW * titleSzie) / 2, (scaleW * titleSzie) / 2, 0]
+            }
           }
         ]
       }
@@ -137,12 +178,13 @@ export default {
       this.mChart.resize()
     },
     startInterval() {
+      this.timer && clearInterval(this.timer)
       this.timer = setInterval(() => {
         this.currentPage++
-        if (this.currentPage > this.total - 1) {
+        if (this.currentPage > this.startValueArr.length - 1) {
           this.currentPage = 0
         }
-        this.update()
+        this.updateC()
       }, 3000)
     }
   }

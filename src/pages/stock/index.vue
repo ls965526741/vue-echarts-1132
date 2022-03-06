@@ -7,6 +7,12 @@ import { getData } from '@/api'
 import { debounce } from 'lodash'
 import { titleSzie } from '@/config'
 export default {
+  props: {
+    theme: {
+      type: String,
+      default: 'chalk'
+    }
+  },
   data() {
     return {
       list: [],
@@ -33,19 +39,23 @@ export default {
   },
   mounted() {
     this.dbcScreenFit = debounce(this.screenFit, 20)
-    this.init()
-    addEventListener('resize', this.screenFit)
-    this.screenFit()
-    this.startInterval()
+    this.getList()
   },
   destroyed() {
     removeEventListener('resize', this.screenFit)
     clearInterval(this.timer)
   },
+  watch: {
+    theme() {
+      this.mChart.dispose()
+      this.init()
+      this.screenFit()
+      this.updateC()
+    }
+  },
   methods: {
-    async init() {
+    async getList() {
       const arr = []
-      this.mChart = this.$echarts.init(this.$refs.stockRef, 'chalk')
       const res = await getData('stock')
       res.sort((a, b) => b.sales - a.sales)
       for (let i = 0; i < res.length / 5; i++) {
@@ -109,6 +119,15 @@ export default {
         })
         this.list[index1] = arr1
       })
+
+      this.init()
+      this.updateC()
+      addEventListener('resize', this.screenFit)
+      this.screenFit()
+      this.startInterval()
+    },
+    async init() {
+      this.mChart = this.$echarts.init(this.$refs.stockRef, this.theme)
       const option = {
         title: {
           text: '▎库存和销量分析',
@@ -117,13 +136,12 @@ export default {
         }
       }
       this.mChart.setOption(option)
-      this.update()
       this.mChart.on('mouseover', () => {
         clearInterval(this.timer)
       })
       this.mChart.on('mouseout', this.startInterval)
     },
-    update() {
+    updateC() {
       const option = {
         tooltip: {
           // 这里为item 可以为内部的数据开启 单独的 tooltip
@@ -154,12 +172,13 @@ export default {
       this.mChart.resize()
     },
     startInterval() {
+      this.timer && clearInterval(this.timer)
       this.timer = setInterval(() => {
         this.currentPage++
         if (this.currentPage > 1) {
           this.currentPage = 0
         }
-        this.update()
+        this.updateC()
       }, 4000)
     }
   }

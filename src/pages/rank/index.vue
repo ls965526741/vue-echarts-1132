@@ -7,6 +7,12 @@ import { getData } from '@/api'
 import * as echarts from 'echarts'
 import { titleSzie } from '@/config'
 export default {
+  props: {
+    theme: {
+      type: String,
+      default: 'chalk'
+    }
+  },
   data() {
     return {
       mChart: null,
@@ -17,25 +23,32 @@ export default {
   },
   mounted() {
     this.getList()
-    this.init()
-    addEventListener('resize', this.screenFit)
-    this.screenFit()
-    this.startInterval()
   },
   destroyed() {
     removeEventListener('resize', this.screenFit)
     clearInterval(this.timer)
   },
+  watch: {
+    theme() {
+      this.mChart.dispose()
+      this.init()
+      this.screenFit()
+      this.updateC()
+    }
+  },
   methods: {
-    // 初始化echarts
-    init() {
-      this.mChart = echarts.init(this.$refs.rank, 'chalk')
-      const initPoint = {}
-      this.mChart.setOption(initPoint)
-    },
     async getList() {
       const res = await getData('rank')
       this.list = res.sort((a, b) => b.value - a.value)
+      this.init()
+      this.updateC()
+      this.screenFit()
+      addEventListener('resize', this.screenFit)
+      this.startInterval()
+    },
+    // 初始化echarts
+    init() {
+      this.mChart = echarts.init(this.$refs.rank, this.theme)
       const option = {
         title: {
           text: '▎地区销售排行',
@@ -74,7 +87,6 @@ export default {
         ]
       }
       this.mChart.setOption(option)
-
       this.mChart.on('mouseover', () => {
         clearInterval(this.timer)
       })
@@ -82,7 +94,6 @@ export default {
       this.mChart.on('mouseout', () => {
         this.startInterval()
       })
-      this.updateC()
     },
     updateC() {
       // 渐变色数组
@@ -159,7 +170,7 @@ export default {
       this.mChart.resize()
     },
     startInterval() {
-      this.timerId && clearInterval(this.timerId)
+      this.timer && clearInterval(this.timer)
       this.timer = setInterval(() => {
         this.currentIndex++
         if (this.currentIndex > this.list.length - 11) {

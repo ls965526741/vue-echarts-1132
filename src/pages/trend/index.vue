@@ -1,13 +1,13 @@
 <template>
   <div class="e-container">
     <div class="e-container trend" ref="trendRef"></div>
-    <div class="e-title">
-      <div @click="switchTitle()">
-        <span>▎ {{ currentTitle }} </span>
+    <div class="e-title" :class="theme === 'chalk' ? '' : 'screen-color'">
+      <div @click="sendSwitchTitle()">
+        <span class="title-name"><span>▎</span>{{ currentTitle }} </span>
         <i class="iconfont icon-arrows">&#xe6eb;</i>
       </div>
       <div
-        @click="switchTitle(item.key)"
+        @click="sendSwitchTitle(item.key)"
         v-show="isShow"
         v-for="(item, index) in selectTitle"
         :key="index"
@@ -24,6 +24,12 @@ import { getData } from '@/api'
 import { debounce } from 'lodash'
 import {} from '@/config'
 export default {
+  props: {
+    theme: {
+      type: String,
+      default: 'chalk'
+    }
+  },
   data() {
     return {
       list: {},
@@ -32,14 +38,16 @@ export default {
       isShow: false
     }
   },
+  created() {
+    this.$socket.registerCallBack('switchTitle', this.switchTitle)
+  },
   mounted() {
     this.dbcScreenFit = debounce(this.screenFit, 20)
-    this.init()
-    addEventListener('resize', this.dbcScreenFit)
-    this.screenFit()
+    this.getList()
   },
   destroyed() {
     removeEventListener('resize', this.dbcScreenFit)
+    this.$socket.registerCallBack('switchTitle', this.switchTitle)
   },
   computed: {
     currentTitle() {
@@ -50,12 +58,24 @@ export default {
       return list.filter(item => item.key !== this.classify)
     }
   },
+  watch: {
+    theme() {
+      this.mChart.dispose()
+      this.init()
+      this.screenFit()
+      this.updateC()
+    }
+  },
   methods: {
-    async init() {
-      this.mChart = this.$echarts.init(this.$refs.trendRef, 'chalk')
-      const res = await getData('trend')
-      this.list = res
-
+    async getList() {
+      this.list = await getData('trend')
+      this.init()
+      this.updateC()
+      addEventListener('resize', this.dbcScreenFit)
+      this.screenFit()
+    },
+    init() {
+      this.mChart = this.$echarts.init(this.$refs.trendRef, this.theme)
       const option = {
         grid: {
           left: '3%',
@@ -67,7 +87,7 @@ export default {
         },
         xAxis: {
           type: 'category',
-          data: res.common.month,
+          data: this.list.common.month,
           boundaryGap: false
         },
         yAxis: {
@@ -82,9 +102,8 @@ export default {
         }
       }
       this.mChart.setOption(option)
-      this.update()
     },
-    update() {
+    updateC() {
       const seriesArr = []
       const colorArr1 = [
         'rgba(11, 168, 44, 0.5)',
@@ -151,20 +170,32 @@ export default {
       this.mChart.setOption(option)
       this.mChart.resize()
     },
-    switchTitle(key, e) {
+    sendSwitchTitle(key, e) {
       if (key) {
-        this.classify = key
-        this.update()
-        this.isShow = false
+        this.$socket.send({
+          action: 'itemChange',
+          socketType: 'switchTitle',
+          chartName: key
+        })
       } else {
         this.isShow = !this.isShow
       }
+    },
+    switchTitle({ chartName }) {
+      this.classify = chartName
+      this.updateC()
+      this.isShow = false
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
+// 切换主题的样式
+.screen-color {
+  background-color: #fff !important;
+  color: #161522 !important;
+}
 .trend {
   position: relative;
 }
@@ -174,23 +205,33 @@ export default {
   left: 3%;
   background-color: #222733;
   color: #fff;
-  padding-left: 8px;
-  border-radius: 4px;
-  font-size: 6%;
+  border-radius: 6px;
+  font-size: 18px;
   cursor: pointer;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  .icon-arrows {
-    font-size: 10%;
+  .title-name {
+    position: relative;
+    span {
+      position: absolute;
+      left: -8px;
+    }
   }
-  .select-title {
-    text-indent: 1em;
-    padding-left: 6%;
+  > div {
+    padding: 5px 10px 5px 15px;
+  }
+  .icon-arrows {
+    font-size: 18px;
+  }
+  > div:hover {
+    background-color: #dddddd;
+    border-radius: 6px;
+    color: #161522;
   }
 }
 .e-title:hover {
-  background-color: #000;
+  background-color: #222733;
 }
 </style>

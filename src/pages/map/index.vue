@@ -1,5 +1,5 @@
 <template>
-  <div class="e-container" ref="mapRef" @dblclick="switchMap('china')"></div>
+  <div class="e-container" ref="mapRef" @dblclick="sendSocket({ key: 'china' })"></div>
 </template>
 
 <script>
@@ -8,74 +8,54 @@ import { debounce } from 'lodash'
 import getProvinceMapInfo from '@/utils/map_utils.js'
 import { titleSzie } from '@/config'
 export default {
+  props: {
+    theme: {
+      type: String,
+      default: 'chalk'
+    }
+  },
   data() {
     return {
       mChart: null,
-      dbcDebounce: null
+      chinaMap: {},
+      scatterList: []
     }
   },
+  watch: {
+    theme() {
+      this.mChart.dispose()
+      this.init()
+      this.screenFit()
+    }
+  },
+  mounted() {
+    this.getList()
+    this.$socket.registerCallBack('switchMap', this.updateC)
+    window.addEventListener('resize', this.screenFit)
+  },
+  destroyed() {
+    removeEventListener('resize', this.screenFit)
+    this.$socket.unRegisterCallBack('switchMap', this.updateC)
+  },
   methods: {
-    // 获取散点图数据
+    getAllList() {
+      return Promise.all([getData('map/china'), getData('map')])
+    },
     async getList() {
-      const res = await getData('map')
-      this.update(res)
+      const res = await this.getAllList()
+      this.chinaMap = res[0]
+      this.scatterList = res[1]
+      this.init()
+      this.screenFit()
     },
     // 初始化图标
-    async init() {
-      this.mChart = this.$echarts.init(this.$refs.mapRef, 'chalk')
-      const chinaMap = await getData('map/china')
-      this.$echarts.registerMap('china', chinaMap)
-      const option = {
-        title: {
-          text: '▎商家分布',
-          left: '3%',
-          top: '3%'
-        },
-        geo: {
-          type: 'map',
-          map: 'china',
-          top: '5%',
-          bottom: '5%',
-          // 允许拖动及缩放
-          roam: true,
-          // zoom: 1.1, //默认缩放比例
-          itemStyle: {
-            // 地图的填充色
-            areaColor: '#2E72BF',
-            // 省份的边框色
-            borderColor: '#333'
-          },
-          label: {
-            show: true,
-            color: 'white',
-            formatter: '{a}'
-          }
-        }
-      }
-      this.mChart.setOption(option)
-      this.mChart.on('click', async arg => {
-        const params = getProvinceMapInfo(arg.name)
-        if (params.key === undefined) {
-          return false
-        }
-        const res = await getData(params.path)
-        this.$echarts.registerMap(params.key, res)
-        const option = {
-          geo: {
-            map: params.key
-          },
-          series: [],
-          legend: {}
-        }
-        this.mChart.setOption(option)
-      })
-    },
-    // 更新图表
-    update(res = []) {
-      const legendArr = res.map(item => {
+    init() {
+      this.mChart = this.$echarts.init(this.$refs.mapRef, this.theme)
+      this.$echarts.registerMap('china', this.chinaMap)
+      const legendArr = this.scatterList.map(item => {
         return item.name
       })
-      const seriesArr = res.map(item => {
+      const series = this.scatterList.map(item => {
         // return 一个类别下的所有散点数据
         return {
           type: 'effectScatter',
@@ -94,6 +74,11 @@ export default {
         }
       })
       const option = {
+        title: {
+          text: '▎商家分布',
+          left: '3%',
+          top: '3%'
+        },
         legend: {
           left: '2%',
           bottom: '5%',
@@ -101,9 +86,58 @@ export default {
           orient: 'verticle',
           data: legendArr.reverse()
         },
-        series: seriesArr
+        geo: {
+          type: 'map',
+          map: 'china',
+          top: '5%',
+          bottom: '5%',
+          zoom: 0.9,
+          // 允许拖动及缩放
+          roam: true,
+          // zoom: 1.1, //默认缩放比例
+          itemStyle: {
+            // 地图的填充色
+            areaColor: '#2E72BF',
+            // 省份的边框色
+            borderColor: '#333'
+          },
+          label: {
+            show: true,
+            color: 'white',
+            formatter: '{a}'
+          }
+        },
+        series
       }
       this.mChart.setOption(option)
+      this.mChart.on('click', arg => {
+        const params = getProvinceMapInfo(arg.name)
+        if (params.key !== undefined) {
+          this.sendSocket(params)
+        }
+      })
+    },
+    sendSocket: debounce(function (map) {
+      this.$socket.send({
+        action: 'itemChange',
+        socketType: 'switchMap',
+        chartName: map
+      })
+    }, 200),
+    // 更新图表
+    async updateC({ chartName }) {
+      let option = {}
+      if (chartName.key !== 'china') {
+        const res = await getData(chartName.path)
+        this.$echarts.registerMap(chartName.key, res)
+      }
+      option = {
+        geo: {
+          map: chartName.key
+        }
+      }
+      this.mChart.setOption(option)
+      this.mChart.resize()
     },
     // 屏幕适配
     screenFit() {
@@ -127,22 +161,7 @@ export default {
       }
       this.mChart.setOption(option)
       this.mChart.resize()
-    },
-    // 切换地图
-    switchMap(map) {
-      const option = {
-        geo: {
-          map
-        }
-      }
-      this.mChart.setOption(option)
     }
-  },
-  mounted() {
-    this.init()
-    this.getList()
-    window.addEventListener('resize', debounce(this.screenFit, 20))
-    this.screenFit()
   }
 }
 </script>

@@ -1,8 +1,8 @@
 <template>
   <div class="e-container">
     <div class="e-container hot" ref="hotRef"></div>
-    <i :style="iconStyle" class="iconfont icon-left" @click="typeSwitch(currentIndex--)">&#xe6ef;</i>
-    <i :style="iconStyle" class="iconfont icon-right" @click="typeSwitch(currentIndex++)">&#xe6ed;</i>
+    <i :style="iconStyle" class="iconfont icon-left" @click="sendSocket(currentIndex--)">&#xe6ef;</i>
+    <i :style="iconStyle" class="iconfont icon-right" @click="sendSocket(currentIndex++)">&#xe6ed;</i>
     <span :style="iconStyle" class="cate-name">{{ cateName }}</span>
   </div>
 </template>
@@ -12,36 +12,54 @@ import { debounce } from 'lodash'
 import { getData } from '@/api'
 import { titleSzie } from '@/config'
 export default {
+  props: {
+    theme: {
+      type: String,
+      default: 'chalk'
+    }
+  },
   data() {
     return {
       mChart: null,
       list: [],
       currentIndex: 0,
       scaleW: 1,
+      iconStyle: { fontSize: '', color: '' },
       dbcScreenFit: null
     }
   },
   mounted() {
-    this.init()
-    this.dbcScreenFit = debounce(this.screenFit, 20)
-    window.addEventListener('resize', this.dbcScreenFit)
-    this.screenFit()
+    this.$socket.registerCallBack('hotSelect', this.typeSwitch)
+    this.getList()
   },
   destroyed() {
     window.removeEventListener('resize', this.dbcScreenFit)
+    this.$socket.unRegisterCallBack('hotSelect', this.typeSwitch)
   },
   computed: {
-    iconStyle() {
-      return { fontSize: this.scaleW * 60 + 'px' }
-    },
     cateName() {
       return this.list[this.currentIndex]?.name
     }
   },
+  watch: {
+    theme(newVal) {
+      this.iconStyle.color = newVal === 'chalk' ? '#fff' : '#000'
+      this.mChart.dispose()
+      this.init()
+      this.screenFit()
+      this.updateC()
+    }
+  },
   methods: {
-    async init() {
-      this.mChart = this.$echarts.init(this.$refs.hotRef, 'chalk')
+    async getList() {
       this.list = await getData('hotproduct')
+      this.init()
+      this.dbcScreenFit = debounce(this.screenFit, 20)
+      window.addEventListener('resize', this.dbcScreenFit)
+      this.screenFit()
+    },
+    init() {
+      this.mChart = this.$echarts.init(this.$refs.hotRef, this.theme)
       const option = {
         title: {
           text: '▎热销商品占比',
@@ -70,6 +88,9 @@ export default {
             label: {
               show: false
             },
+            labelLine: {
+              show: false
+            },
             emphasis: {
               label: {
                 // 连接文字的线条
@@ -81,10 +102,10 @@ export default {
         ]
       }
       this.mChart.setOption(option)
-      this.update()
+      this.updateC()
     },
     // 数据更新
-    update() {
+    updateC() {
       const option = {
         series: [
           {
@@ -100,6 +121,7 @@ export default {
 
       const scaleW = w / 1440
       this.scaleW = scaleW
+      this.iconStyle.fontSize = this.scaleW * 60 + 'px'
       const option = {
         title: {
           textStyle: {
@@ -125,10 +147,19 @@ export default {
       this.mChart.setOption(option)
       this.mChart.resize()
     },
-    typeSwitch() {
-      this.currentIndex =
+    sendSocket() {
+      const i =
         this.currentIndex >= this.list.length ? 0 : this.currentIndex < 0 ? this.list.length - 1 : this.currentIndex
-      this.update()
+      this.$socket.send({
+        action: 'itemChange',
+        socketType: 'hotSelect',
+        chartName: i
+      })
+    },
+    // 切换饼图数据
+    typeSwitch({ chartName }) {
+      this.currentIndex = chartName
+      this.updateC()
     }
   }
 }
@@ -141,17 +172,17 @@ export default {
 .icon-left {
   position: absolute;
   top: 60%;
-  left: 20%;
+  left: 15%;
   color: #fff;
-  transform: translateX(-50%);
+  transform: translateX(-0);
   cursor: pointer;
 }
 .icon-right {
   position: absolute;
   top: 60%;
-  left: 80%;
+  right: 15%;
   color: #fff;
-  transform: translateX(50%);
+  transform: translateX(0);
 }
 .cate-name {
   position: absolute;
