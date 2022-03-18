@@ -6,7 +6,7 @@
         <img src="~@/assets/images/header_border_light.png" alt="" />
       </div>
       <span class="logo">
-        <a href="https://echarts.apache.org/examples/zh/index.html">echarts</a>
+        <a>point</a>
       </span>
       <span class="title">电商平台实时监控系统</span>
       <div class="title-right">
