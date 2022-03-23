@@ -15,14 +15,6 @@ npm run serve// 运行前端项目
 npm run dev // 运行后端项目
 ```
 
-### 项目展示
-
-![dark](./images/e1.png)
-
-![light](./images/e3.png)
-
-![map](./images/e2.png)
-
 ### 使用技术
 
 ```js
@@ -31,8 +23,6 @@ axios
 webSocket // 互联网交互架构应用层的协议
 koa2 // 基于 nodejs 平台的 web 开发框架
 ```
-
-
 
 ### 实现功能
 
@@ -54,6 +44,16 @@ koa2 // 基于 nodejs 平台的 web 开发框架
 
 - 一端操作，多端联动
 - 通过 webSocket 实现数据推送
+
+### 部分截图
+
+#### 登陆页面
+
+<img style="width:100%; margin-top:10px;" src="https://vkceyugu.cdn.bspapp.com/VKCEYUGU-e3306813-c467-4fe2-a5b0-4f80a8d3051e/340013f7-c090-49e6-8783-9c8226f2487f.png" alt="">
+
+<img style="width:100%; margin-top:10px;" src="https://vkceyugu.cdn.bspapp.com/VKCEYUGU-e3306813-c467-4fe2-a5b0-4f80a8d3051e/31fa1bce-c46a-4fff-99bf-6e8839e8e2d0.png" alt="">
+
+<img style="width:100%; margin-top:10px;" src="https://vkceyugu.cdn.bspapp.com/VKCEYUGU-e3306813-c467-4fe2-a5b0-4f80a8d3051e/a5d5f482-b0d5-4003-9a25-fb63349ea7a2.png" alt="">
 
 ### 关于我
 
